@@ -3,10 +3,8 @@ from pymongo import MongoClient
 from bson import ObjectId
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
 load_dotenv()
 
-# Retrieve MongoDB connection string from environment variable
 mongo_uri = os.getenv("MONGO_URI")
 if not mongo_uri:
     raise ValueError("MongoDB URI is not set in environment variables.")
@@ -15,9 +13,6 @@ client = MongoClient(mongo_uri)
 db = client['project']
 
 def get_valid_object_id(prompt):
-    """
-    Validates and retrieves an ObjectId from user input.
-    """
     while True:
         object_id = input(prompt).strip()
         if ObjectId.is_valid(object_id):
@@ -25,9 +20,6 @@ def get_valid_object_id(prompt):
         print("Invalid ObjectId. Please enter a valid 24-character hex string.")
 
 def get_valid_float(prompt, allow_empty=False):
-    """
-    Validates and retrieves a float value from user input.
-    """
     while True:
         value = input(prompt).strip()
         if allow_empty and not value:
@@ -38,11 +30,8 @@ def get_valid_float(prompt, allow_empty=False):
             print("Invalid input. Please enter a valid number.")
 
 def create_entity(entity_type):
-    """
-    Handles creation of entities: Authors, Books, Customers, and Orders.
-    """
     try:
-        if entity_type == 1:  # Authors
+        if entity_type == 1:
             author = {
                 "name": input("Enter author name: ").strip(),
                 "nationality": input("Enter author's nationality: ").strip()
@@ -50,7 +39,7 @@ def create_entity(entity_type):
             result = db.Authors.insert_one(author)
             print(f"Author created with ID: {result.inserted_id}")
 
-        elif entity_type == 2:  # Books
+        elif entity_type == 2:
             author_name = input("Enter author name for the book: ").strip()
             author = db.Authors.find_one({"name": author_name})
             if not author:
@@ -61,7 +50,7 @@ def create_entity(entity_type):
                 "title": input("Enter book title: ").strip(),
                 "genre": input("Enter book genre: ").strip(),
                 "price": get_valid_float("Enter book price: "),
-                "authorId": ObjectId(author["_id"])  # Ensure authorId is an ObjectId
+                "authorId": ObjectId(author["_id"])
             }
             if book["price"] is None:
                 print("Book creation canceled due to invalid price.")
@@ -69,7 +58,7 @@ def create_entity(entity_type):
             result = db.Books.insert_one(book)
             print(f"Book created with ID: {result.inserted_id}")
 
-        elif entity_type == 3:  # Customers
+        elif entity_type == 3:
             customer = {
                 "name": input("Enter customer name: ").strip(),
                 "email": input("Enter customer email: ").strip(),
@@ -78,7 +67,7 @@ def create_entity(entity_type):
             result = db.Customers.insert_one(customer)
             print(f"Customer created with ID: {result.inserted_id}")
 
-        elif entity_type == 4:  # Orders
+        elif entity_type == 4:
             customer_name = input("Enter customer name for the order: ").strip()
             customer = db.Customers.find_one({"name": customer_name})
             if not customer:
@@ -90,7 +79,7 @@ def create_entity(entity_type):
             for title in books_titles:
                 book = db.Books.find_one({"title": title.strip()})
                 if book:
-                    books.append(ObjectId(book["_id"]))  # Ensure book IDs are ObjectId
+                    books.append(ObjectId(book["_id"]))
                 else:
                     print(f"Book '{title.strip()}' not found.")
 
@@ -99,7 +88,7 @@ def create_entity(entity_type):
                 return
 
             order = {
-                "customerId": ObjectId(customer["_id"]),  # Ensure customerId is an ObjectId
+                "customerId": ObjectId(customer["_id"]),
                 "orderDate": input("Enter order date (YYYY-MM-DD): ").strip(),
                 "books": books,
                 "total": get_valid_float("Enter total amount: ")
@@ -113,40 +102,62 @@ def create_entity(entity_type):
         print(f"Error creating entity: {e}")
 
 def read_entity(entity_type):
-    """
-    Handles reading of entities: Authors, Books, Customers, and Orders.
-    """
     try:
-        if entity_type == 1:  # Authors
-            for author in db.Authors.find():
+        if entity_type == 1:
+            identifier = input("Enter author name or ID: ").strip()
+            if ObjectId.is_valid(identifier):
+                author = db.Authors.find_one({"_id": ObjectId(identifier)})
+            else:
+                author = db.Authors.find_one({"name": identifier})
+            if author:
                 print(f"Name: {author['name']}, Nationality: {author['nationality']}")
+            else:
+                print("Author not found!")
 
-        elif entity_type == 2:  # Books
-            for book in db.Books.find():
-                author = db.Authors.find_one({"_id": ObjectId(book["authorId"])})  # Ensure authorId is an ObjectId
+        elif entity_type == 2:
+            identifier = input("Enter book title or ID: ").strip()
+            if ObjectId.is_valid(identifier):
+                book = db.Books.find_one({"_id": ObjectId(identifier)})
+            else:
+                book = db.Books.find_one({"title": identifier})
+            if book:
+                author = db.Authors.find_one({"_id": ObjectId(book["authorId"])})
                 author_name = author["name"] if author else "Unknown"
                 print(f"Title: {book['title']}, Genre: {book['genre']}, Price: {book['price']}, Author: {author_name}")
+            else:
+                print("Book not found!")
 
-        elif entity_type == 3:  # Customers
-            for customer in db.Customers.find():
+        elif entity_type == 3:
+            identifier = input("Enter customer name or ID: ").strip()
+            if ObjectId.is_valid(identifier):
+                customer = db.Customers.find_one({"_id": ObjectId(identifier)})
+            else:
+                customer = db.Customers.find_one({"name": identifier})
+            if customer:
                 print(f"Name: {customer['name']}, Email: {customer['email']}, Address: {customer['address']}")
+            else:
+                print("Customer not found!")
 
-        elif entity_type == 4:  # Orders
-            for order in db.Orders.find():
-                customer = db.Customers.find_one({"_id": ObjectId(order["customerId"])})  # Ensure customerId is an ObjectId
-                books = db.Books.find({"_id": {"$in": [ObjectId(book_id) for book_id in order["books"]]}})  # Ensure book IDs are ObjectId
-                book_titles = [book['title'] for book in books]
-                print(f"Order ID: {order['_id']}, Customer: {customer['name'] if customer else 'Unknown'}, "
-                      f"Books: {', '.join(book_titles)}, Total: {order['total']}, Date: {order['orderDate']}")
+        elif entity_type == 4:
+            identifier = input("Enter order ID: ").strip()
+            if ObjectId.is_valid(identifier):
+                order = db.Orders.find_one({"_id": ObjectId(identifier)})
+                if order:
+                    customer = db.Customers.find_one({"_id": ObjectId(order["customerId"])})
+                    books = db.Books.find({"_id": {"$in": [ObjectId(book_id) for book_id in order["books"]]}})
+                    book_titles = [book['title'] for book in books]
+                    print(f"Order ID: {order['_id']}, Customer: {customer['name'] if customer else 'Unknown'}, "
+                          f"Books: {', '.join(book_titles)}, Total: {order['total']}, Date: {order['orderDate']}")
+                else:
+                    print("Order not found!")
+            else:
+                print("Invalid Order ID!")
     except Exception as e:
         print(f"Error reading entity: {e}")
 
 def update_entity(entity_type):
-    """
-    Handles updates for Authors, Books, and Orders.
-    """
     try:
-        if entity_type == 1:  # Authors
+        if entity_type == 1:
             author_id = get_valid_object_id("Enter the author ID to update: ")
             author = db.Authors.find_one({"_id": author_id})
             if not author:
@@ -160,9 +171,9 @@ def update_entity(entity_type):
             db.Authors.update_one({"_id": author_id}, {"$set": update_fields})
             print(f"Author with ID {author_id} updated.")
 
-        elif entity_type == 2:  # Books
+        elif entity_type == 2:
             book_id = get_valid_object_id("Enter the book ID to update: ")
-            book = db.Books.find_one({"_id": ObjectId(book_id)})  # Ensure bookId is an ObjectId
+            book = db.Books.find_one({"_id": ObjectId(book_id)})
             if not book:
                 print("Book not found!")
                 return
@@ -175,9 +186,9 @@ def update_entity(entity_type):
             db.Books.update_one({"_id": book_id}, {"$set": update_fields})
             print(f"Book with ID {book_id} updated.")
 
-        elif entity_type == 4:  # Orders
+        elif entity_type == 4:
             order_id = get_valid_object_id("Enter the order ID to update: ")
-            order = db.Orders.find_one({"_id": ObjectId(order_id)})  # Ensure orderId is an ObjectId
+            order = db.Orders.find_one({"_id": ObjectId(order_id)})
             if not order:
                 print("Order not found!")
                 return
@@ -189,15 +200,12 @@ def update_entity(entity_type):
         print(f"Error updating entity: {e}")
 
 def delete_entity(entity_type):
-    """
-    Handles deletion of Authors, Books, and Orders.
-    """
     try:
         id_type_map = {1: "Authors", 2: "Books", 4: "Orders"}
         entity_id = get_valid_object_id(f"Enter the {id_type_map[entity_type]} ID to delete: ")
 
         collection = db[id_type_map[entity_type]]
-        result = collection.delete_one({"_id": ObjectId(entity_id)})  # Ensure entityId is an ObjectId
+        result = collection.delete_one({"_id": ObjectId(entity_id)})
         if result.deleted_count:
             print(f"{id_type_map[entity_type]} with ID {entity_id} deleted.")
         else:
