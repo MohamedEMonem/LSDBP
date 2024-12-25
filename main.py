@@ -4,6 +4,7 @@ import random
 from datetime import datetime
 from dotenv import load_dotenv
 import os
+from bson import ObjectId
 
 # Load environment variables from .env file
 load_dotenv()
@@ -43,7 +44,7 @@ for _ in range(200):
         "title": faker.text(max_nb_chars=20),
         "genre": random.choice(genres),
         "price": round(random.uniform(10, 50), 2),
-        "authorId": random.choice(author_ids)
+        "authorId": ObjectId(random.choice(author_ids))  # Ensure authorId is an ObjectId
     })
 book_ids = books_collection.insert_many(books).inserted_ids
 
@@ -60,8 +61,8 @@ customer_ids = customers_collection.insert_many(customers).inserted_ids
 # Generate Orders
 orders = []
 for _ in range(300):
-    customer_id = random.choice(customer_ids)
-    order_books = random.sample(list(book_ids), k=random.randint(1, 5))
+    customer_id = ObjectId(random.choice(customer_ids))  # Ensure customerId is an ObjectId
+    order_books = [ObjectId(book_id) for book_id in random.sample(list(book_ids), k=random.randint(1, 5))]  # Ensure book IDs are ObjectId
     total = sum(books_collection.find_one({"_id": book_id})["price"] for book_id in order_books)
     orders.append({
         "customerId": customer_id,
