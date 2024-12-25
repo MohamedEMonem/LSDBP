@@ -226,7 +226,7 @@ def update_entity(entity_type):
 
 def delete_entity(entity_type):
     try:
-        id_type_map = {1: "Authors", 2: "Books", 4: "Orders"}
+        id_type_map = {1: "Authors", 2: "Books",3: 'Customer', 4: "Orders"}
         entity_id = get_valid_object_id(f"Enter the {id_type_map[entity_type]} ID to delete: ")
 
         collection = db[id_type_map[entity_type]]
