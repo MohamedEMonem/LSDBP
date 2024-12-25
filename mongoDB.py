@@ -226,15 +226,23 @@ def update_entity(entity_type):
 
 def delete_entity(entity_type):
     try:
-        id_type_map = {1: "Authors", 2: "Books",3: 'Customer', 4: "Orders"}
-        entity_id = get_valid_object_id(f"Enter the {id_type_map[entity_type]} ID to delete: ")
-
+        id_type_map = {1: "Authors", 2: "Books", 3: "Customers", 4: "Orders"}
         collection = db[id_type_map[entity_type]]
-        result = collection.delete_one({"_id": ObjectId(entity_id)})
-        if result.deleted_count:
-            print(f"{id_type_map[entity_type]} with ID {entity_id} deleted.")
+
+        if entity_type in [1, 2, 3]:
+            identifier = input(f"Enter the {id_type_map[entity_type][:-1]} name or ID to delete: ").strip()
+            if ObjectId.is_valid(identifier):
+                result = collection.delete_one({"_id": ObjectId(identifier)})
+            else:
+                result = collection.delete_one({"name": identifier})
         else:
-            print(f"{id_type_map[entity_type]} not found!")
+            entity_id = get_valid_object_id(f"Enter the {id_type_map[entity_type]} ID to delete: ")
+            result = collection.delete_one({"_id": ObjectId(entity_id)})
+
+        if result.deleted_count:
+            print(f"{id_type_map[entity_type][:-1]} with identifier '{identifier}' deleted.")
+        else:
+            print(f"{id_type_map[entity_type][:-1]} not found!")
     except Exception as e:
         print(f"Error deleting entity: {e}")
 
@@ -260,8 +268,8 @@ def menu():
                 update_entity(int(input("Enter entity number (1, 2, 4): ").strip()))
 
             elif choice == "4":
-                print("\n--- Choose Entity to Delete ---\n1. Authors\n2. Books\n4. Orders")
-                delete_entity(int(input("Enter entity number (1, 2, 4): ").strip()))
+                print("\n--- Choose Entity to Delete ---\n1. Authors\n2. Books\n3. Customers\n4. Orders")
+                delete_entity(int(input("Enter entity number (1-4): ").strip()))
 
             elif choice == "5":
                 print("Exiting...")
