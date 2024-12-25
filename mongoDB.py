@@ -101,8 +101,33 @@ def create_entity(entity_type):
     except Exception as e:
         print(f"Error creating entity: {e}")
 
-def read_entity(entity_type):
+def read_entity(entity_type, read_all=False):
     try:
+        if read_all:
+            if entity_type == 1:
+                authors = db.Authors.find()
+                for author in authors:
+                    print(f"ID: {author['_id']}, Name: {author['name']}, Nationality: {author['nationality']}")
+            elif entity_type == 2:
+                books = db.Books.find()
+                for book in books:
+                    author = db.Authors.find_one({"_id": ObjectId(book["authorId"])})
+                    author_name = author["name"] if author else "Unknown"
+                    print(f"ID: {book['_id']}, Title: {book['title']}, Genre: {book['genre']}, Price: {book['price']}, Author: {author_name}")
+            elif entity_type == 3:
+                customers = db.Customers.find()
+                for customer in customers:
+                    print(f"ID: {customer['_id']}, Name: {customer['name']}, Email: {customer['email']}, Address: {customer['address']}")
+            elif entity_type == 4:
+                orders = db.Orders.find()
+                for order in orders:
+                    customer = db.Customers.find_one({"_id": ObjectId(order["customerId"])})
+                    books = db.Books.find({"_id": {"$in": [ObjectId(book_id) for book_id in order["books"]]}})
+                    book_titles = [book['title'] for book in books]
+                    print(f"Order ID: {order['_id']}, Customer: {customer['name'] if customer else 'Unknown'}, "
+                          f"Books: {', '.join(book_titles)}, Total: {order['total']}, Date: {order['orderDate']}")
+            return
+
         if entity_type == 1:
             identifier = input("Enter author name or ID: ").strip()
             if ObjectId.is_valid(identifier):
@@ -226,7 +251,9 @@ def menu():
 
             elif choice == "2":
                 print("\n--- Choose Entity to Read ---\n1. Authors\n2. Books\n3. Customers\n4. Orders")
-                read_entity(int(input("Enter entity number (1-4): ").strip()))
+                entity_type = int(input("Enter entity number (1-4): ").strip())
+                read_all = input("Read all? (y/n): ").strip().lower() == 'y'
+                read_entity(entity_type, read_all)
 
             elif choice == "3":
                 print("\n--- Choose Entity to Update ---\n1. Authors\n2. Books\n4. Orders")
